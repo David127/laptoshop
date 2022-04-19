@@ -1,0 +1,155 @@
+{% extends 'layouts/base.html' %}
+{% load custom_tags %}
+
+{% block content %}
+<div class="row text-center text-white mb-5">
+    <div class="col-lg-7 mx-auto">
+        <h1 class="display-4 text-gray">Carrito de Compras</h1>
+        <a href="{% url 'index' %}" class="btn btn-secondary">
+            Regresar
+        </a>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-7 mx-auto">
+        <h4 class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted">&nbsp;</span>
+        </h4>
+        <ul class="list-group shadow">
+            {% for object in objects %}
+                <li class="list-group-item">
+                    <div class="media align-items-lg-center flex-column flex-lg-row p-3">
+                        <div class="media-body order-2 order-lg-1">
+                            <h5 class="mt-0 font-weight-bold mb-2">{{ object.product.name }}</h5>
+                            <p class="font-italic text-muted mb-0 small">{{ object.product.description }}</p>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <h6 class="font-weight-bold my-2">s/ {{ object.price }}</h6>
+                                <div class="btn-group" role="group" aria-label="Basic example">
+                                    <form id="down_{{ object.product.id }}" action="{% url 'quantity_down' object.id %}" method="POST">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">-</button>
+                                    </form>
+                                    <button type="button" class="btn bg-white">{{ object.quantity }}</button>
+                                    <form id="up_{{ object.product.id }}" action="{% url 'quantity_up' object.id %}" method="POST">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success">+</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <img src="{{ object.product.image }}" alt="{{ object.product.name }}" width="200" class="ml-lg-5 order-1 order-lg-2">
+                    </div>
+                </li>
+            {% empty %}
+                <li class="list-group-item">
+                    <div class="media align-items-lg-center flex-column flex-lg-row p-3">
+                        <div class="media-body order-2 order-lg-1">
+                            No hay items agregados al carrito
+                        </div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-lg-5 mx-auto">
+      {% if objects %}
+          <h4 class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted">Productos</span>
+            <span class="badge badge-secondary badge-pill">{{ objects.count }}</span>
+          </h4>
+          <ul class="list-group mb-3">
+            {% for object in objects %}
+            <li class="list-group-item d-flex justify-content-between lh-condensed">
+              <div>
+                <h6 class="my-0">{{ object.product.name }}</h6>
+                <small class="text-muted">Cantidad: {{ object.quantity }}</small>
+              </div>
+              <span class="text-muted">s/ {{ object.price | multiply:object.quantity }}</span>
+            </li>
+            {% endfor %}
+            <li class="list-group-item d-flex justify-content-between">
+              <strong>Total </strong>
+              <strong>s/ {{ objects | total_ammount }}</strong>
+            </li>
+            <div id="paypal-button-container"></div>
+          </ul>
+      {% else %}
+          <h4 class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted">Productos</span>
+            <span class="badge badge-secondary badge-pill">{{ objects.count }}</span>
+          </h4>
+          <ul class="list-group mb-3">
+            <li class="list-group-item">
+                <div class="media align-items-lg-center flex-column flex-lg-row p-3">
+                    <div class="media-body order-2 order-lg-1"> - </div>
+                </div>
+            </li>
+          </ul>
+      {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+
+{% block js %}
+<script
+    src="https://www.paypal.com/sdk/js?client-id=ATuQtQ7ZQyXufu4Xb2mP-pX49R3lHYjSoLuiZ_2Ee0CurkljzJWZDEwzgiS7dCwDX4hk7NIihOjxquU2">
+</script>
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie('csrftoken')
+  const total_ammount = '{{ objects | total_ammount }}'
+  const url_transaction = '{% url 'payment' %}'
+  const url_confirmation = '{% url 'confirmation' %}'
+
+  paypal.Buttons({
+    style: {
+      layout: 'vertical',
+      color:  'black',
+      shape:  'rect',
+      label:  'checkout'
+    },
+    createOrder: function(data, actions) {
+      return actions.order.create({
+        purchase_units: [{
+          amount: {
+            currency_code: 'USD',
+            value: total_ammount
+          }
+        }]
+      });
+    },
+    onApprove: function(data, actions) {
+        return fetch(url_transaction, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                orderID: data.orderID
+            })
+        }).then(function(res) {
+            return res.json()
+        }).then(function() {
+            window.location.href = url_confirmation
+        })
+    }
+  }).render('#paypal-button-container');
+
+  </script>
+{% endblock %}

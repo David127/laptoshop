@@ -1,0 +1,38 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="row text-center text-white mb-5">
+    <div class="col-lg-7 mx-auto">
+        <h1 class="display-4 text-gray">Pedidos</h1>
+        <a href="{% url 'index' %}" class="btn btn-secondary">
+            Home
+        </a>
+    </div>
+</div>
+<div class="row">
+    <table class="table">
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Nº</th>
+                <th scope="col">Price</th>
+                <th scope="col">Fecha</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in objects %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ order.code }}</td>
+                    <td>s/ {{ order.price }}</td>
+                    <td>{{ order.created_at }}</td>
+                    <td>
+                        <a href="{% url 'order_detail' order.code %}" class="btn btn-primary btn-sm text-white">Ver</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
